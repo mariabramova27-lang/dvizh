@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Турбо-Квест: Академия Скорости</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap');
+
+    :root {
+        --bg-dark: #0f172a;
+        --bg-card: #1e293b;
+        --primary: #8b5cf6;
+        --secondary: #ec4899;
+        --accent: #f59e0b;
+        --text-light: #f8fafc;
+        --success: #10b981;
+        --error: #ef4444;
+        --vk-blue: #0077FF;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: 'Nunito', sans-serif;
+        background: linear-gradient(135deg, var(--bg-dark) 0%, #1e1b4b 100%);
+        color: var(--text-light);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    /* Фоновый водяной знак */
+    body::before {
+        content: "МЯГКАЯ МАТЕМАТИКА • ТУРБО-КВЕСТ • СКОРОСТЬ";
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%) rotate(-25deg);
+        font-size: 50px; font-weight: 900;
+        color: rgba(139, 92, 246, 0.05);
+        white-space: nowrap; pointer-events: none;
+        z-index: 0; letter-spacing: 5px;
+    }
+
+    .bg-shape {
+        position: fixed; border-radius: 50%; filter: blur(80px); z-index: 0; opacity: 0.3;
+    }
+    .shape-1 { width: 400px; height: 400px; background: var(--primary); top: -100px; right: -100px; }
+    .shape-2 { width: 300px; height: 300px; background: var(--secondary); bottom: -50px; left: -50px; }
+
+    .container {
+        position: relative; z-index: 1; width: 100%; max-width: 650px;
+    }
+
+    .screen { display: none; animation: fadeIn 0.5s ease; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- СТАРТОВЫЙ ЭКРАН --- */
+    .start-card {
+        background: rgba(30, 41, 59, 0.9);
+        border-radius: 24px; padding: 40px 30px; text-align: center;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        border: 2px solid rgba(139, 92, 246, 0.3);
+    }
+    .start-icon { font-size: 4rem; margin-bottom: 20px; display: block; }
+    h1 {
+        font-size: 2.2rem; font-weight: 900; color: #fff; margin-bottom: 10px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .start-card p { font-size: 1.1rem; color: #94a3b8; margin-bottom: 30px; line-height: 1.5; }
+    .btn-start {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white; border: none; padding: 16px 40px; border-radius: 50px;
+        font-family: inherit; font-size: 1.2rem; font-weight: 900; cursor: pointer;
+        box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4); transition: all 0.3s; width: 100%;
+    }
+    .btn-start:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 15px 35px rgba(139, 92, 246, 0.6); }
+
+    /* --- ИГРОВОЙ ЭКРАН --- */
+    .game-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 20px; background: rgba(30, 41, 59, 0.7);
+        padding: 15px 20px; border-radius: 20px; backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .score-box { font-size: 1.1rem; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 5px; }
+    .progress-box { font-size: 1rem; font-weight: 800; color: #94a3b8; }
+    .progress-bar-container { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 25px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); width: 0%; transition: width 0.3s ease; border-radius: 10px; }
+
+    .card {
+        background: rgba(30, 41, 59, 0.95); border-radius: 24px; padding: 30px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.05);
+        transition: transform 0.3s ease, border-color 0.3s;
+    }
+    .card.correct { border-color: var(--success); transform: scale(1.02); }
+    .card.wrong { border-color: var(--error); animation: shake 0.4s; }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+
+    .hero-badge {
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+        background: rgba(139, 92, 246, 0.2); color: var(--primary);
+        border-radius: 20px; font-size: 0.9rem; font-weight: 800; margin-bottom: 20px;
+    }
+
+    .task-text {
+        font-size: 1.15rem; line-height: 1.6; margin-bottom: 25px; color: #e2e8f0;
+    }
+    .task-text b { color: var(--accent); font-size: 1.25rem; }
+
+    .input-area { display: flex; gap: 10px; margin-bottom: 15px; }
+    .input-area input {
+        flex: 1; padding: 15px 20px; border-radius: 15px; border: 2px solid rgba(255,255,255,0.1);
+        background: rgba(0,0,0,0.2); color: #fff; font-size: 1.2rem; font-weight: 800;
+        font-family: inherit; text-align: center; outline: none; transition: border-color 0.3s;
+    }
+    .input-area input:focus { border-color: var(--primary); }
+    .btn-submit {
+        padding: 15px 25px; background: var(--primary); color: white; border: none;
+        border-radius: 15px; font-family: inherit; font-size: 1.2rem; font-weight: 900;
+        cursor: pointer; transition: all 0.2s;
+    }
+    .btn-submit:hover { background: #7c3aed; }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-hint {
+        width: 100%; padding: 12px; background: transparent; color: var(--accent);
+        border: 2px dashed rgba(245, 158, 11, 0.4); border-radius: 15px;
+        font-family: inherit; font-size: 1rem; font-weight: 800; cursor: pointer;
+        transition: all 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px;
+    }
+    .btn-hint:hover { background: rgba(245, 158, 11, 0.1); border-color: var(--accent); }
+
+    .hint-text {
+        display: none; margin-top: 15px; padding: 15px; background: rgba(245, 158, 11, 0.1);
+        border-left: 4px solid var(--accent); border-radius: 10px; color: var(--accent);
+        font-size: 1rem; font-weight: 600; line-height: 1.4; animation: fadeIn 0.4s ease;
+    }
+    .hint-text.show { display: block; }
+
+    .feedback { text-align: center; margin-top: 15px; font-size: 1.1rem; font-weight: 800; min-height: 25px; }
+    .feedback.success { color: var(--success); }
+    .feedback.error { color: var(--error); }
+
+    .btn-next {
+        display: none; width: 100%; margin-top: 20px; padding: 15px;
+        background: linear-gradient(135deg, var(--success), #059669);
+        color: white; border: none; border-radius: 15px; font-family: inherit;
+        font-size: 1.1rem; font-weight: 900; cursor: pointer; animation: fadeIn 0.4s ease;
+    }
+    .btn-next.show { display: block; }
+
+    /* --- ЭКРАН РЕЗУЛЬТАТОВ --- */
+    .results-card {
+        background: rgba(30, 41, 59, 0.95); border-radius: 24px; padding: 40px 30px;
+        text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 2px solid var(--success);
+    }
+    .results-icon { font-size: 5rem; margin-bottom: 20px; animation: bounce 1s infinite; }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    .results-card h2 { font-size: 2rem; color: #fff; margin-bottom: 10px; }
+    .final-score { font-size: 3rem; font-weight: 900; color: var(--accent); margin: 20px 0; }
+    .results-msg { font-size: 1.2rem; color: #94a3b8; margin-bottom: 30px; line-height: 1.5; }
+
+    /* --- РЕКЛАМНЫЙ ВИДЖЕТ --- */
+    .promo-widget {
+        position: fixed; bottom: 20px; right: 20px; background: rgba(30, 41, 59, 0.95);
+        backdrop-filter: blur(10px); border: 2px solid rgba(139, 92, 246, 0.4);
+        border-radius: 16px; padding: 15px; max-width: 250px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 100; display: flex; flex-direction: column; gap: 10px;
+    }
+    .promo-title { font-size: 15px; font-weight: 900; background: linear-gradient(90deg, #c084fc, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .promo-text { font-size: 12px; color: #94a3b8; line-height: 1.4; margin-bottom: 5px; }
+    .promo-btn {
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        padding: 8px 12px; border-radius: 8px; font-size: 12px;
+        font-weight: 800; text-decoration: none; transition: background 0.2s; text-align: center;
+    }
+    .btn-vk { background-color: var(--vk-blue); color: white; }
+    .btn-vk:hover { background-color: #005bb5; }
+    .btn-msg { background-color: rgba(255,255,255,0.1); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.2); }
+    .btn-msg:hover { background-color: rgba(255,255,255,0.2); }
+
+    @media (max-width: 768px) {
+        .promo-widget { position: relative; bottom: auto; right: auto; margin-top: 20px; max-width: 100%; width: 100%; }
+        .promo-btn-row { display: flex; gap: 10px; }
+        .promo-btn { flex: 1; }
+    }
+</style>
+</head>
+<body>
+
+    <!-- Фоновые элементы -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+
+    <div class="container">
+        
+        <!-- Стартовый экран -->
+        <div id="screen-start" class="screen active">
+            <div class="start-card">
+                <span class="start-icon">🏎️</span>
+                <h1>Академия Скорости</h1>
+                <p>Считарик, Дракон Деления и Профессор Мягкий устроили гонки! Помоги им рассчитать время встречи, скорость сближения и обгоны. Готов принять вызов?</p>
+                <button class="btn-start" onclick="startGame()">Погнали! 🚀</button>
+            </div>
+        </div>
+
+        <!-- Игровой экран -->
+        <div id="screen-game" class="screen">
+            <div class="game-header">
+                <div class="score-box">⭐ <span id="score-display">0</span></div>
+                <div class="progress-box" id="progress-display">1 / 5</div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+
+            <div class="card" id="game-card">
+                <div class="hero-badge" id="hero-name">🧙‍♂️ Профессор Мягкий</div>
+                
+                <div class="task-text" id="task-text">
+                    <!-- Текст задачи -->
+                </div>
+
+                <div class="input-area">
+                    <input type="number" step="any" id="answer-input" placeholder="Ответ" onkeypress="handleKeyPress(event)">
+                    <button class="btn-submit" id="btn-submit" onclick="checkAnswer()">Ответить</button>
+                </div>
+
+                <button class="btn-hint" id="btn-hint" onclick="showHint()">
+                    🕵️‍♂️ Подсказка (5 баллов)
+                </button>
+                <div class="hint-text" id="hint-text"></div>
+
+                <div class="feedback" id="feedback"></div>
+                <button class="btn-next" id="btn-next" onclick="nextQuestion()">Дальше →</button>
+            </div>
+        </div>
+
+        <!-- Экран результатов -->
+        <div id="screen-end" class="screen">
+            <div class="results-card">
+                <span class="results-icon" id="results-icon">🏆</span>
+                <h2 id="results-title">Финиш!</h2>
+                <div class="final-score" id="final-score">0 / 10</div>
+                <p class="results-msg" id="results-msg"></p>
+                <button class="btn-start" onclick="resetGame()">Ещё один заезд 🔄</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- РЕКЛАМНЫЙ ВИДЖЕТ -->
+    <div class="promo-widget">
+        <div class="promo-title">🚀 Мягкая математика</div>
+        <div class="promo-text">Подготовка к ОГЭ/ЕГЭ, олимпиады и soft skills без стресса. Развиваем логику!</div>
+        <div class="promo-btn-row">
+            <a href="https://vk.com/smartskillsmaria" target="_blank" class="promo-btn btn-vk">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13.162 18.994c.609 0 .858-.406.851-.915-.031-1.917.714-2.949 2.059-1.604 1.488 1.488 1.796 2.519 3.603 2.519h3.2c.808 0 1.126-.26 1.126-.668 0-.863-1.421-2.386-2.625-3.504-1.686-1.565-1.765-1.602-.313-3.486 1.801-2.339 4.157-5.336 2.073-5.336h-3.981c-.772 0-.828.435-1.103 1.083-.995 2.347-2.886 5.387-3.604 4.922-.751-.485-.407-2.406-.35-5.261.015-.754.011-1.271-1.141-1.539-.814-.18-1.775-.283-2.804-.283-1.865 0-3.429.126-4.525.41-1.074.276-1.45.875-1.45 1.424 0 .587.449.765 1.043.928.755.207.985.505.985 1.271 0 1.134-.211 3.876-.781 4.557-.555.664-1.401.122-2.389-1.422C4.804 11.673 3.701 8.778 3.701 7.932c0-.555.354-.94 1.148-.94h4.146c.929 0 1.013.55 1.228 1.249.619 2.008 1.666 4.674 2.528 5.868.707.978 1.244.8 1.244-.219 0-.513-.113-2.786-.113-3.995 0-1.386.331-2.014 1.145-2.014h2.568c.651 0 .849.372.849.998 0 .853-.419 2.078-.949 3.285-.42.954-.51 1.386.146 2.115 1.142 1.271 2.63 3.094 2.63 4.225 0 .595-.354.984-1.22.984h-2.826z"/></svg>
+                Группа
+            </a>
+            <a href="https://vk.com/im/convo/-229273902?entrypoint=community_page&tab=all" target="_blank" class="promo-btn btn-msg">
+                ✉️ Написать
+            </a>
+        </div>
+    </div>
+
+<script>
+    // База задач
+    const questions = [
+        {
+            hero: "🔢 Считарик",
+            text: "Считарик бежит со скоростью <b>100 м/мин</b>. Он бежал <b>10 минут</b>. Какое расстояние он пробежал? (Ответ в метрах)",
+            answer: 1000,
+            hint: "Формула: S = V × t. Умножь скорость на время."
+        },
+        {
+            hero: "🐉 Дракон Деления",
+            text: "Дракон Деления бежит со скоростью <b>180 м/мин</b> и догоняет Считарика, который бежит со скоростью <b>120 м/мин</b>. Считарик выбежал на <b>5 минут</b> раньше. Через сколько минут Дракон его догонит?",
+            answer: 10,
+            hint: "1) Найди, сколько метров успел пробежать Считарик за 5 минут (S=V×t).\n2) Найди скорость сближения (V_дракона - V_считарика).\n3) Раздели отставание на скорость сближения."
+        },
+        {
+            hero: "🐱 Котэ-Косинус",
+            text: "Котэ-Косинус и Считарик бегут по круговому треку длиной <b>400 метров</b>. Скорость Котэ — <b>6 м/с</b>, а Считарика — <b>4 м/с</b>. Они стартовали одновременно. Через сколько секунд Котэ обгонит Считарика ровно на один круг?",
+            answer: 200,
+            hint: "Скорость сближения = 6 - 4 = 2 м/с. Чтобы обогнать на круг, нужно преодолеть расстояние в 400 м. Время = 400 ÷ 2."
+        },
+        {
+            hero: "🧙‍♂️ Профессор Мягкий",
+            text: "Профессор Мягкий плывёт на лодке по реке. Его собственная скорость — <b>20 км/ч</b>, а скорость течения — <b>3 км/ч</b>. Сколько километров он проплывёт <b>по течению</b> за <b>4 часа</b>?",
+            answer: 92,
+            hint: "По течению скорость лодки и реки складываются: V = 20 + 3 = 23 км/ч. Затем умножь скорость на время (S = V × t)."
+        },
+        {
+            hero: "👸 Принцесса Пятая",
+            text: "Принцесса Пятая вышла из замка и идёт со скоростью <b>50 м/мин</b>. Через <b>6 минут</b> вслед за ней выбежал Считарик со скоростью <b>80 м/мин</b>. Через сколько минут Считарик догонит Принцессу?",
+            answer: 10,
+            hint: "1) Принцесса за 6 мин прошла: 50 × 6 = 300 м.\n2) Скорость сближения: 80 - 50 = 30 м/мин.\n3) Время: 300 ÷ 30 = 10 мин."
+        }
+    ];
+
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let hintUsed = false;
+
+    // DOM
+    const screenStart = document.getElementById('screen-start');
+    const screenGame = document.getElementById('screen-game');
+    const screenEnd = document.getElementById('screen-end');
+    const taskText = document.getElementById('task-text');
+    const heroName = document.getElementById('hero-name');
+    const answerInput = document.getElementById('answer-input');
+    const btnSubmit = document.getElementById('btn-submit');
+    const btnHint = document.getElementById('btn-hint');
+    const hintText = document.getElementById('hint-text');
+    const feedback = document.getElementById('feedback');
+    const btnNext = document.getElementById('btn-next');
+    const gameCard = document.getElementById('game-card');
+    const scoreDisplay = document.getElementById('score-display');
+    const progressDisplay = document.getElementById('progress-display');
+    const progressFill = document.getElementById('progress-fill');
+
+    function startGame() {
+        // Перемешиваем и берем все 5 вопросов
+        currentQuestions = [...questions].sort(() => 0.5 - Math.random());
+        currentIndex = 0;
+        score = 0;
+        
+        screenStart.classList.remove('active');
+        screenEnd.classList.remove('active');
+        screenGame.classList.add('active');
+        
+        updateHeader();
+        loadQuestion();
+    }
+
+    function updateHeader() {
+        scoreDisplay.textContent = score;
+        progressDisplay.textContent = `${currentIndex + 1} / ${currentQuestions.length}`;
+        progressFill.style.width = `${(currentIndex / currentQuestions.length) * 100}%`;
+    }
+
+    function loadQuestion() {
+        const q = currentQuestions[currentIndex];
+        
+        gameCard.classList.remove('correct', 'wrong');
+        feedback.textContent = '';
+        feedback.className = 'feedback';
+        answerInput.value = '';
+        answerInput.disabled = false;
+        btnSubmit.disabled = false;
+        btnNext.classList.remove('show');
+        hintText.classList.remove('show');
+        hintText.textContent = '';
+        btnHint.style.display = 'flex';
+        hintUsed = false;
+
+        heroName.textContent = q.hero;
+        taskText.innerHTML = q.text;
+        answerInput.focus();
+    }
+
+    function checkAnswer() {
+        const q = currentQuestions[currentIndex];
+        const userAnswer = parseFloat(answerInput.value);
+        const correctAnswer = q.answer;
+
+        if (isNaN(userAnswer)) {
+            feedback.textContent = '⚠️ Напиши число!';
+            feedback.className = 'feedback error';
+            return;
+        }
+
+        if (Math.abs(userAnswer - correctAnswer) < 0.01) {
+            feedback.textContent = '🎉 Верно! Отличная скорость реакции!';
+            feedback.className = 'feedback success';
+            gameCard.classList.add('correct');
+            
+            if (!hintUsed) score += 10; else score += 5;
+            scoreDisplay.textContent = score;
+            finishQuestion();
+        } else {
+            feedback.textContent = '❌ Не совсем. Проверь расчеты!';
+            feedback.className = 'feedback error';
+            gameCard.classList.add('wrong');
+            
+            setTimeout(() => gameCard.classList.remove('wrong'), 500);
+            answerInput.select();
+        }
+    }
+
+    function showHint() {
+        const q = currentQuestions[currentIndex];
+        hintText.textContent = '💡 ' + q.hint;
+        hintText.classList.add('show');
+        btnHint.style.display = 'none';
+        hintUsed = true;
+    }
+
+    function finishQuestion() {
+        answerInput.disabled = true;
+        btnSubmit.disabled = true;
+        btnNext.classList.add('show');
+        btnNext.focus();
+        progressFill.style.width = `${((currentIndex + 1) / currentQuestions.length) * 100}%`;
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        if (currentIndex < currentQuestions.length) {
+            updateHeader();
+            loadQuestion();
+        } else {
+            endGame();
+        }
+    }
+
+    function endGame() {
+        screenGame.classList.remove('active');
+        screenEnd.classList.add('active');
+
+        const maxScore = currentQuestions.length * 10;
+        const percentage = (score / maxScore) * 100;
+        
+        document.getElementById('final-score').textContent = `${score} / ${maxScore}`;
+        
+        const icon = document.getElementById('results-icon');
+        const title = document.getElementById('results-title');
+        const msg = document.getElementById('results-msg');
+
+        if (percentage >= 90) {
+            icon.textContent = '🏎️🏆';
+            title.textContent = 'Шумахер от математики!';
+            msg.textContent = 'Все задачи решены без единой ошибки! Ты настоящий знаток скоростей.';
+            createConfetti();
+        } else if (percentage >= 70) {
+            icon.textContent = '🥈';
+            title.textContent = 'Отличный заезд!';
+            msg.textContent = 'Хороший результат! Пара задач требует внимания, но формула скорости тебя слушается.';
+        } else {
+            icon.textContent = '🛠️';
+            title.textContent = 'Нужен пит-стоп...';
+            msg.textContent = 'Повтори формулы скорости, времени и расстояния, а также скорость сближения. У тебя всё получится!';
+        }
+    }
+
+    function resetGame() {
+        screenEnd.classList.remove('active');
+        screenStart.classList.add('active');
+    }
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (btnNext.classList.contains('show')) {
+                nextQuestion();
+            } else {
+                checkAnswer();
+            }
+        }
+    }
+
+    function createConfetti() {
+        const colors = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.style.position = 'fixed';
+            confetti.style.width = Math.random() * 8 + 6 + 'px';
+            confetti.style.height = confetti.style.width;
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.top = '-10px';
+            confetti.style.zIndex = '999';
+            confetti.style.borderRadius = '50%';
+            confetti.style.animation = `fall ${Math.random() * 2 + 2}s linear forwards`;
+            
+            document.body.appendChild(confetti);
+            setTimeout(() => confetti.remove(), 4000);
+        }
+    }
+</script>
+
+<style>
+    @keyframes fall {
+        to { transform: translateY(100vh) rotate(720deg); }
+    }
+</style>
+</body>
+</html>
